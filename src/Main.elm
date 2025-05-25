@@ -9,6 +9,7 @@ import Html.Events
 import Json.Decode
 import Set
 import Time
+import Task
 import Tree exposing (Tree(..))
 
 
@@ -39,7 +40,7 @@ type alias Post =
 
 type alias Model =
     { root : Tree Post
-    , exists : Animator.Timeline ( Set.Set Int, Set.Set Int ) -- prev, current
+    , exists : Animator.Timeline (Set.Set Int) -- prev, current
     , replyingId : Maybe Int -- matches id in Post
     , writing : Maybe Post
     }
@@ -62,9 +63,9 @@ init : () -> ( Model, Cmd msg )
 init _ =
     let
         root =
-            Branch (Post "god" "genesis" 0) [ Leaf (Post "skynet" "have fun!" 1) ]
+            Branch (Post "god" "genesis" 1) [ Leaf (Post "skynet" "have fun!" 0) ]
     in
-    ( Model root (Animator.init ( Set.empty, treeToExists root )) Nothing Nothing
+    ( Model root (Animator.init (treeToExists root)) Nothing Nothing
     , Cmd.none
     )
 
@@ -75,6 +76,7 @@ init _ =
 
 type Msg
     = Tick Time.Posix
+    | Fade
     | Select Int
     | Add Int String -- Insert comment at parent
 
@@ -89,6 +91,11 @@ update msg model =
         Tick newTime ->
             ( Animator.update newTime animator model, Cmd.none )
 
+        Fade ->
+            ( { model | exists = Animator.go Animator.slowly (treeToExists model.root) model.exists }
+            , Cmd.none
+            )
+
         Select replyingId ->
             ( { model | replyingId = Just replyingId }, Cmd.none )
 
@@ -96,19 +103,12 @@ update msg model =
             let
                 newRoot =
                     model.root |> updateTreeRecursive replyingId content
-
-                ( _, curr ) =
-                    Animator.current model.exists
-
-                next =
-                    treeToExists newRoot
             in
             ( { model
                 | root = newRoot
-                , exists = Animator.go Animator.slowly ( curr, next ) model.exists
                 , replyingId = Nothing
               }
-            , Cmd.none
+            , Task.perform identity (Task.succeed Fade)
             )
 
 
@@ -125,7 +125,7 @@ updateTreeRecursive replyingId content tree =
                     |> List.foldl (\elem result -> result ++ [ elem |> updateTreeRecursive replyingId content ]) []
                  )
                     ++ (if state.id == replyingId then
-                            [ Branch (Post "god2" content 2) [] ]
+                            [ Branch (Post ("god" ++ String.fromInt (state.id+1)) content (state.id+1)) [] ]
 
                         else
                             []
@@ -148,7 +148,7 @@ view model =
         ]
 
 
-treeToDivRecursive : Tree Post -> Maybe Int -> Animator.Timeline ( Set.Set Int, Set.Set Int ) -> Html.Html Msg
+treeToDivRecursive : Tree Post -> Maybe Int -> Animator.Timeline (Set.Set Int) -> Html.Html Msg
 treeToDivRecursive root replyingId timeline =
     case root of
         Branch state children ->
@@ -156,9 +156,9 @@ treeToDivRecursive root replyingId timeline =
                 (Html.div
                     [ Html.Events.onClick (Select state.id)
                     , Animator.Inline.opacity timeline <|
-                        \( prev, curr ) ->
+                        \exists ->
                             Animator.at
-                                (if Set.member state.id curr && Set.member state.id prev then
+                                (if Set.member state.id exists then
                                     1
 
                                  else
