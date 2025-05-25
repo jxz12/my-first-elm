@@ -92,9 +92,7 @@ update msg model =
             ( Animator.update newTime animator model, Cmd.none )
 
         Fade ->
-            ( { model | exists = Animator.go Animator.slowly (treeToExists model.root) model.exists }
-            , Cmd.none
-            )
+            ( model, Cmd.none)
 
         Select replyingId ->
             ( { model | replyingId = Just replyingId }, Cmd.none )
@@ -107,8 +105,9 @@ update msg model =
             ( { model
                 | root = newRoot
                 , replyingId = Nothing
+                , exists = Animator.go Animator.slowly (treeToExists newRoot) model.exists
               }
-            , Task.perform identity (Task.succeed Fade)
+            , Cmd.none
             )
 
 
@@ -202,12 +201,11 @@ treeToExists root =
 onSubmitField : String -> (String -> msg) -> Html.Attribute msg
 onSubmitField target event =
     Html.Events.preventDefaultOn "submit"
-        (Json.Decode.map (\input -> ( event input, True )) <|
-            Json.Decode.field "target" <|
-                Json.Decode.field target <|
-                    Json.Decode.field "value" <|
-                        Json.Decode.string
-        )
+    <| Json.Decode.map (\input -> ( event input, True ))
+    <| Json.Decode.field "target"
+    <| Json.Decode.field target
+    <| Json.Decode.field "value"
+    <| Json.Decode.string
 
 
 textBox : Int -> Html.Html Msg
