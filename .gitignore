@@ -1,0 +1,4 @@
+elm-stuff/
+www/js/elm.js
+**/*.dSYM
+**/.DS_Store
