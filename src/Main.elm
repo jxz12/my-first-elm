@@ -9,7 +9,6 @@ import Html.Events
 import Json.Decode
 import Set
 import Time
-import Task
 import Tree exposing (Tree(..))
 
 
@@ -40,7 +39,7 @@ type alias Post =
 
 type alias Model =
     { root : Tree Post
-    , exists : Animator.Timeline (Set.Set Int) -- prev, current
+    , exists : Animator.Timeline (Set.Set Int)
     , replyingId : Maybe Int -- matches id in Post
     , writing : Maybe Post
     }
@@ -54,8 +53,7 @@ subscriptions model =
 
 animator : Animator.Animator Model
 animator =
-    Animator.animator
-        -- this is an 'empty' animator that exists only to chain with |>
+    Animator.animator  -- this is an 'empty' animator that exists only to chain with |>
         |> Animator.watching .exists (\newExists model -> { model | exists = newExists })
 
 
@@ -75,7 +73,7 @@ init _ =
 
 
 type Msg
-    = Tick Time.Posix
+    = Tick Time.Posix  -- this can be thought of as a converter to Msg type
     | Fade
     | Select Int
     | Add Int String -- Insert comment at parent
