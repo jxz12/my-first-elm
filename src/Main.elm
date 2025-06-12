@@ -156,10 +156,10 @@ treeToDivRecursive root replyingId timeline =
                         \exists ->
                             Animator.at
                                 (if Set.member state.id exists then
-                                    1
+                                    ((replyingId |> Maybe.withDefault 3 |> toFloat) + 0.3) / 3
 
                                  else
-                                    0
+                                    ((replyingId |> Maybe.withDefault 1|> toFloat) + 0.1) / 5
                                 )
                     ]
                     [ Html.text (state.username ++ ": \"" ++ state.content ++ "\"") ]
